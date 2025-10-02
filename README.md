@@ -102,7 +102,7 @@ julia> UCM.apply_style(src, cfg_tex)
 The same keyword arguments that define `UCMConfig` can be given to apply style directly:
 ```julia-repl
 julia> UCM.apply_style(src; math_style_spec=:iso)
-"𝐵𝑋 𝐵𝑋 ∇ 𝛁 𝜕 𝝏 𝜶𝜷 𝛼𝛽 𝜞𝜩 𝛁 𝑎𝑧 𝑎𝑧 𝛤𝛯 ∇ 𝜕 𝝏 𝛤𝛯 𝛼𝛽 1 𝜞𝜩 𝜶𝜷
+"𝐵𝑋 𝐵𝑋 ∇ 𝛁 𝜕 𝝏 𝜶𝜷 𝛼𝛽 𝜞𝜩 𝛁 𝑎𝑧 𝑎𝑧 𝛤𝛯 ∇ 𝜕 𝝏 𝛤𝛯 𝛼𝛽 1 𝜞𝜩 𝜶𝜷"
 julia> UCM.apply_style(src; math_style_spec=:upright)
 "BX BX ∇ 𝛁 ∂ 𝛛 𝛂𝛃 αβ 𝚪𝚵 𝛁 az az ΓΞ ∇ ∂ 𝛛 ΓΞ αβ 1 𝚪𝚵 𝛂𝛃"
 julia> UCM.apply_style(src; math_style_spec=:french)
