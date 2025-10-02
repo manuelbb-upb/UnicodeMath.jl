@@ -23,10 +23,10 @@ symbfsfup       # bold sans-serif upright
 symtt           # mono spaced
 symbb           # blackboard
 symbbit         # blackboard italic
-cal             # caligraphic
-bfcal           # bold caligraphic
-frak            # frakture
-bffrak          # bold frakture
+symcal          # caligraphic
+symbfcal        # bold caligraphic
+symfrak         # frakture
+symbffrak       # bold frakture
 ```
 take as input a `Char` and, if applicable, return the correspondingly styled `Char`, e.g., as defined in the
 [Alphanumeric Symbols Unicode block](https://en.wikipedia.org/wiki/Mathematical_operators_and_symbols_in_Unicode#Mathematical_Alphanumeric_Symbols_block).
