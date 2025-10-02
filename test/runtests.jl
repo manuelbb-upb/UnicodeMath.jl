@@ -164,38 +164,46 @@ end
     )
 end
 
-#@testset "String Styling with `math_style_spec`" begin
-begin
-    test_strings = Dict(
-        :num_up => "1",
-        :latin_up => "az",
-        :Latin_up => "BX",
-        :latin_it => "𝑎𝑧",
-        :Latin_it => "𝐵𝑋",
-        :greek_up => "αβ",
-        :Greek_up => "ΓΞ",
-        :greek_it => "𝛼𝛽",
-        :Greek_it => "𝛤𝛯",
-        :greek_bfit => "𝜶𝜷",
-        :Greek_bfit => "𝜞𝜩",
-        :greek_bfup => "𝛂𝛃",
-        :Greek_bfup => "𝚪𝚵",
-        :Nabla_up => "∇",
-        :Nabla_it => "𝛻",
-        :Nabla_bfup => "𝛁",
-        :Nabla_bfit => "𝜵",
-        :partial_up => "∂",
-        :partial_it => "𝜕",
-        :partial_bfup => "𝛛",
-        :partial_bfit => "𝝏",
-    )
+const test_strings = Dict(
+    :num_up => "1",
+    :latin_up => "az",
+    :Latin_up => "BX",
+    :latin_it => "𝑎𝑧",
+    :Latin_it => "𝐵𝑋",
+    :Latin_bfit => "𝑨𝒁",
+    :latin_bfit => "𝒂𝒛",
+    :Latin_bfup => "𝐀𝐙",
+    :latin_bfup => "𝐚𝐳",
+    :greek_up => "αβ",
+    :Greek_up => "ΓΞ",
+    :greek_it => "𝛼𝛽",
+    :Greek_it => "𝛤𝛯",
+    :greek_bfit => "𝜶𝜷",
+    :Greek_bfit => "𝜞𝜩",
+    :greek_bfup => "𝛂𝛃",
+    :Greek_bfup => "𝚪𝚵",
+    :Nabla_up => "∇",
+    :Nabla_it => "𝛻",
+    :Nabla_bfup => "𝛁",
+    :Nabla_bfit => "𝜵",
+    :partial_up => "∂",
+    :partial_it => "𝜕",
+    :partial_bfup => "𝛛",
+    :partial_bfit => "𝝏",
+)
 
+@testset "String Styling with `math_style_spec`" begin
+    
     results_tex = Dict(
         :num_up => :num_up,
         :latin_up => :latin_it,
         :Latin_up => :Latin_it,
         :latin_it => :latin_it,
         :Latin_it => :Latin_it,
+        :Latin_bfit => :Latin_bfup,
+        :Latin_bfup => :Latin_bfup,
+        :latin_bfit => :latin_bfup,
+        :latin_bfup => :latin_bfup,
         :greek_up => :greek_it,
         :Greek_up => :Greek_up,
         :greek_it => :greek_it,
@@ -220,6 +228,10 @@ begin
         :Latin_up => :Latin_it,
         :latin_it => :latin_it,
         :Latin_it => :Latin_it,
+        :Latin_bfit => :Latin_bfit,
+        :Latin_bfup => :Latin_bfit,
+        :latin_bfit => :latin_bfit,
+        :latin_bfup => :latin_bfit,
         :greek_up => :greek_it,
         :Greek_up => :Greek_it,
         :greek_it => :greek_it,
@@ -244,6 +256,10 @@ begin
         :Latin_up => :Latin_up,
         :latin_it => :latin_up,
         :Latin_it => :Latin_up,
+        :Latin_bfit => :Latin_bfup,
+        :Latin_bfup => :Latin_bfup,
+        :latin_bfit => :latin_bfup,
+        :latin_bfup => :latin_bfup,
         :greek_up => :greek_up,
         :Greek_up => :Greek_up,
         :greek_it => :greek_up,
@@ -268,6 +284,10 @@ begin
         :Latin_up => :Latin_up,
         :latin_it => :latin_it,
         :Latin_it => :Latin_up,
+        :Latin_bfit => :Latin_bfit,
+        :Latin_bfup => :Latin_bfup,
+        :latin_bfit => :latin_bfit,
+        :latin_bfup => :latin_bfup,
         :greek_up => :greek_up,
         :Greek_up => :Greek_up,
         :greek_it => :greek_up,
@@ -305,4 +325,62 @@ begin
         end
     end
 
+end
+
+@testset "granular overrides" begin
+    normal_style_spec = (;
+        Greek = :literal,
+        greek = :upright,
+        Latin = :upright,
+        latin = :italic
+    )
+    str_in = test_strings[:Greek_it] * 
+        test_strings[:Greek_up] * 
+        test_strings[:greek_it] * 
+        test_strings[:greek_up] *
+        test_strings[:Latin_it] *
+        test_strings[:Latin_up] *
+        test_strings[:latin_it] *
+        test_strings[:latin_up]
+
+    str_out = test_strings[:Greek_it] *
+        test_strings[:Greek_up] * 
+        test_strings[:greek_up] * 
+        test_strings[:greek_up] * 
+        test_strings[:Latin_up] * 
+        test_strings[:Latin_up] * 
+        test_strings[:latin_it] * 
+        test_strings[:latin_it] 
+    
+    cfg = UCM.UCMConfig(; normal_style_spec)
+
+    @test UCM.apply_style(str_in, cfg) == str_out
+
+    bold_style_spec = (;
+        Greek = :literal,
+        greek = :upright,
+        Latin = :upright,
+        latin = :italic
+    )
+    str_in = test_strings[:Greek_bfit] * 
+        test_strings[:Greek_bfup] * 
+        test_strings[:greek_bfit] * 
+        test_strings[:greek_bfup] *
+        test_strings[:Latin_bfit] *
+        test_strings[:Latin_bfup] *
+        test_strings[:latin_bfit] *
+        test_strings[:latin_bfup]
+
+    str_out = test_strings[:Greek_bfit] *
+        test_strings[:Greek_bfup] * 
+        test_strings[:greek_bfup] * 
+        test_strings[:greek_bfup] * 
+        test_strings[:Latin_bfup] * 
+        test_strings[:Latin_bfup] * 
+        test_strings[:latin_bfit] * 
+        test_strings[:latin_bfit] 
+    
+    cfg = UCM.UCMConfig(; bold_style_spec)
+
+    @test UCM.apply_style(str_in, cfg) == str_out
 end

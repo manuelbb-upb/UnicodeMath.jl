@@ -102,6 +102,7 @@ import UnPack: @unpack
 
 # Simple Type Constants:
 const Nothymbol = Union{Nothing, Symbol}
+const SpecTup = @NamedTuple{Greek::Symbol, greek::Symbol, Latin::Symbol, latin::Symbol}
 
 # # Extra LaTeX Commands
 # Include standalone file defining `extra_commands::Dict{Symbol,UCMCommand}`.
@@ -149,6 +150,7 @@ const default_aliases_ref = Ref(default_aliases)
 
 """
     global_config!(; kwargs...)
+    global_config!(cfg::UCMConfig)
 
 Configure how styling functions such as `symbf` act.
 Take the same keyword arguments as [`UCMConfig`](@ref).
@@ -159,6 +161,12 @@ function global_config!(; kwargs...)
     default_substitutions_ref[] = s
     default_aliases_ref[] = a
     return nothing
+end
+
+function global_config!(cfg::UCMConfig)
+    @unpack math_style_spec, normal_style_spec, bold_style_spec, sans_style, partial, nabla = cfg
+    return global_config!(; 
+        math_style_spec, normal_style_spec, bold_style_spec, sans_style, partial, nabla)
 end
 
 # Basic global styling command:

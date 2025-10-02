@@ -26,8 +26,8 @@ Styling configuration. The keywords `normal_style_spec`, `bold_style_spec`, `san
 Base.@kwdef struct UCMConfig
     math_style_spec :: Nothymbol = :tex
     ## overrides
-    normal_style_spec :: Nothymbol = nothing
-    bold_style_spec :: Nothymbol = nothing
+    normal_style_spec :: Union{SpecTup,Nothymbol} = nothing
+    bold_style_spec :: Union{SpecTup,Nothymbol} = nothing
     sans_style :: Nothymbol = nothing
     partial :: Nothymbol = nothing
     nabla :: Nothymbol = nothing
@@ -259,7 +259,7 @@ function alphabet_substitutions(;
 end
 
 # A normal style (:iso, :tex, :french, :upright) assigns normal style specification to alphabets:
-function parse_normal_style_spec(normal_style_spec)
+function parse_normal_style_spec(normal_style_spec::Symbol)
     normal_style_ntup = if normal_style_spec == :iso
         (;
             Greek = :italic,
@@ -298,9 +298,18 @@ function parse_normal_style_spec(normal_style_spec)
     end
     return normal_style_ntup
 end
+function parse_normal_style_spec(spec::SpecTup)
+    for symb in values(spec)
+        @assert symb in (:literal, :upright, :italic)
+    end
+    return spec
+end
+function parse_normal_style_spec(spec)
+    error("Normal style specification must be a symbol or of type $(SpecTup)")
+end
 
 function parse_bold_style_spec(
-    bold_style_spec
+    bold_style_spec::Symbol
 )
     bold_style_ntup = if bold_style_spec == :iso
         (;
@@ -332,6 +341,15 @@ function parse_bold_style_spec(
         )
     end
     return bold_style_ntup
+end
+function parse_bold_style_spec(spec::SpecTup)
+    for symb in values(spec)
+        @assert symb in (:literal, :upright, :italic)
+    end
+    return spec
+end
+function parse_bold_style_spec(spec)
+    error("Bold style specification must be a symbol or of type $(SpecTup)")
 end
 
 function _subtitutions_dict(;
