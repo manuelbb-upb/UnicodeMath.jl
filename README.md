@@ -81,7 +81,7 @@ The following values are valid:
   or a `NamedTuple` with fields `:Greek, :greek, :Latin, :latin` and values `:upright, :italic, :literal`.
 * `bold_style_spec`: `:iso, :tex, :upright, :literal`
   or a `NamedTuple` with fields `:Greek, :greek, :Latin, :latin` and values `:upright, :italic, :literal`.
-* `sans_style`, `partial`, `nabla`: `:uprgiht, :italic, :literal`
+* `sans_style`, `partial`, `nabla`: `:upright, :italic, :literal`
 
 For `_sym` and the `sym` commands, a global configuration is set via `global_config!(cfg)`
 or `global_config!(; kwargs...)`.
