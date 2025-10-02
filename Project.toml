@@ -1,7 +1,7 @@
 name = "UnicodeMath"
 uuid = "0d34d933-8ee7-410a-b7f5-1fe550df0327"
 authors = ["Manuel B. Berkemeier <mmanberk@protonmail.com>"]
-version = "0.0.1"
+version = "0.0.2-DEV"
 
 [deps]
 UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
