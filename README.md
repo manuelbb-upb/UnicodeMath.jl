@@ -127,15 +127,15 @@ In this example, bold glyphs have not been changed, otherwise bold italic glyphs
 ### Global Commands
 Apply default styling (`math_style_spec=:tex`), i.e., italic regular-weight letters, except for uppercase Greek letters, which are printed upright, and upright bold-weight letters, except for lowercase greek, which are printed slanted:
 ```julia-repl
-julia>UCM._sym(src)
+julia> UCM._sym(src)
 "𝐵𝑋 𝐵𝑋 ∇ 𝛁 𝜕 𝝏 𝜶𝜷 𝛼𝛽 𝚪𝚵 𝛁 𝑎𝑧 𝑎𝑧 ΓΞ ∇ 𝜕 𝝏 ΓΞ 𝛼𝛽 1 𝚪𝚵 𝜶𝜷"
 ```
 Change the configuration:
 ```julia-repl
-julia>UCM.global_config!(;normal_style_spec=:upright)
+julia> UCM.global_config!(;normal_style_spec=:upright)
 ```
 Now regular-weight letters are all upright:
 ```julia-repl
-julia>UCM._sym(src)
+julia> UCM._sym(src)
 "BX BX ∇ 𝛁 𝜕 𝝏 𝜶𝜷 αβ 𝚪𝚵 𝛁 az az ΓΞ ∇ 𝜕 𝝏 ΓΞ αβ 1 𝚪𝚵 𝜶𝜷"
 ```
