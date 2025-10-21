@@ -155,43 +155,68 @@ const default_aliases_ref = Ref(default_aliases)
 Configure how styling functions such as `symbf` act.
 Take the same keyword arguments as [`UCMConfig`](@ref).
 """
-function global_config!(; kwargs...)
+function global_config!(args...; kwargs...)
     global default_substitutions_ref, default_aliases_ref
-    s, a = config_dicts(; kwargs...)
+    s, a = config_dicts(args...; kwargs...)
     default_substitutions_ref[] = s
     default_aliases_ref[] = a
     return nothing
 end
 
-function global_config!(cfg::UCMConfig)
-    @unpack math_style_spec, normal_style_spec, bold_style_spec, sans_style, partial, nabla = cfg
-    return global_config!(; 
-        math_style_spec, normal_style_spec, bold_style_spec, sans_style, partial, nabla)
-end
-
 # Basic global styling command:
 """
-    _sym(glyph::Union{Char, UCMChar, AbstractString})
-    _sym(glyph::Union{Char, UCMChar, AbstractString}, trgt_style::Symbol)
+    _sym(glyph::Union{Char, UCMChar, AbstractString}; is_styled=false)
+    _sym(glyph::Union{Char, UCMChar, AbstractString}, trgt_style::Symbol; is_styled=false)
 
 Try to style `glyph` according to global configuration, which is set by 
 [`global_config!`](@ref).
+
+## `is_styled` keyword argument
+The special keyword argument `is_styled` defines how unspecific target styles 
+(like `:bf` or `sf`) are handled.
+In absence of a `trgt_style`, it also determines if upright or italic glyphs are “normalized”.
+
+### Without `trgt_style`
+If there is no explicit `trgt_style`, then `trgt_style` matches the style of `glyph`.
+E.g., `a` results in `trgt_style = :up` and `𝑎` in `trgt_style = :it`.  
+If `is_styled == false`, then `glyph` will be normalized according to configuration.  
+In `:iso` style, both `a` and `𝑎` should be styled to `𝑎`.
+If `is_styled == true`, the styling is a no-op in this case.
+
+### With `trgt_style`
+If `is_styled == true`, then an italic glyph will become bolditalic for `trgt_style == :bf`,
+independent of the configuration.
+If `is_styled == false`, then the glyph is considered “typed by the user” and the bold style
+depends on the configuration.
 """
-function _sym(x::Union{AbstractString,Glyph}, trgt_style::Symbol...)
+function _sym end
+
+function _sym(x::Union{AbstractString,Glyph}, trgt_style::Symbol...; is_styled=false)
     global default_substitutions_ref, default_aliases_ref
 
     return apply_style(
         x,
         default_substitutions_ref[],
         default_aliases_ref[],
-        trgt_style...
+        trgt_style...;
+        is_styled
     )
 end
 
 # Derive specific styling functions like `symbf`:
 for sn in all_styles
     f = Symbol("sym", sn)
-    @eval $f(x::Union{AbstractString, Glyph}) = _sym(x, $(Meta.quot(sn)))
+    @eval begin
+        """
+            $($(Meta.quot(f)))(glyph::Union{Char, UCMChar, AbstractString}; is_styled=false)
+
+        If applicable, return a new `Char` with style fitting `:$($(Meta.quot(sn)))`.
+        For information on the `is_styled` keyword argument, 
+        see [`apply_style`](@ref) or [`_sym`](@ref)."""
+        function $(f)(x::Union{AbstractString, Glyph}; is_styled=false)
+            return _sym(x, $(Meta.quot(sn)); is_styled)
+        end
+    end
 end
 
 end#module

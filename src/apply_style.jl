@@ -34,12 +34,33 @@ Base.@kwdef struct UCMConfig
 end
 
 """
-    apply_style(cfg::UCMConfig, glyph::Char)
-    apply_style(cfg::UCMConfig, glyph::Char, trgt_style::Symbol)
-    apply_style(glyph::Char; kwargs...)
-    apply_style(glyph::Char, trgt_style::Symbol; kwargs...)
+    apply_style(cfg::UCMConfig, glyph::Char; is_styled=false)
+    apply_style(cfg::UCMConfig, glyph::Char, trgt_style::Symbol; is_styled=false)
+    apply_style(glyph::Char; is_styled=false, kwargs...)
+    apply_style(glyph::Char, trgt_style::Symbol; is_styled=false, kwargs...)
 
-Stylize glyph according to configuration `cfg` or keyword arguments."""
+Stylize glyph according to configuration `cfg` or keyword arguments `kwargs...`.
+
+## `is_styled` keyword argument
+The special keyword argument `is_styled` defines how unspecific target styles 
+(like `:bf` or `sf`) are handled.
+In absence of a `trgt_style`, it also determines if upright or italic glyphs are “normalized”.
+
+### Without `trgt_style`
+If there is no explicit `trgt_style`, then `trgt_style` matches the style of `glyph`.
+E.g., `a` results in `trgt_style = :up` and `𝑎` in `trgt_style = :it`.  
+If `is_styled == false`, then `glyph` will be normalized according to configuration.  
+In `:iso` style, both `a` and `𝑎` should be styled to `𝑎`.
+If `is_styled == true`, the styling is a no-op in this case.
+
+### With `trgt_style`
+If `is_styled == true`, then an italic glyph will become bolditalic for `trgt_style == :bf`,
+independent of the configuration.
+If `is_styled == false`, then the glyph is considered “typed by the user” and the bold style
+depends on the configuration.
+"""
+function apply_style end
+
 function apply_style(ch::Char, args...; kwargs...)
     ucm_ch = get(chars_to_ucmchars, ch, nothing)
     isnothing(ucm_ch) && return ch
@@ -48,24 +69,67 @@ function apply_style(ch::Char, args...; kwargs...)
 end
 
 function apply_style(
-    ucm_ch::UCMChar, cfg::UCMConfig, trgt_style::Symbol...
+    ucm_ch::UCMChar, cfg::UCMConfig, trgt_style::Symbol...;
+    is_styled=false
 )
     @unpack math_style_spec, normal_style_spec, bold_style_spec, sans_style, partial, nabla = cfg
     @unpack substitutions, aliases = config_dicts(; 
         math_style_spec, normal_style_spec, bold_style_spec, sans_style, partial, nabla)
-    return apply_style(ucm_ch, substitutions, aliases, trgt_style...)
-end
-
-function apply_style(ucm_ch::UCMChar, trgt_style::Symbol...; kwargs...)
-    cfg = UCMConfig(; kwargs...)
-    return apply_style(ucm_ch, cfg, trgt_style...)
+    return apply_style(ucm_ch, substitutions, aliases, trgt_style...; is_styled)
 end
 
 function apply_style(
-    ucm_ch::UCMChar, substitutions::AbstractDict, aliases::AbstractDict
+    ucm_ch::UCMChar, trgt_style::Symbol...; 
+    is_styled=false, kwargs...
 )
-    trgt_style = _typed_style(ucm_ch.style)
-    return apply_style(ucm_ch, substitutions, aliases, trgt_style)
+    cfg = UCMConfig(; kwargs...)
+    return apply_style(ucm_ch, cfg, trgt_style...; is_styled)
+end
+
+function apply_style(
+    ucm_ch::UCMChar, substitutions::AbstractDict, aliases::AbstractDict;
+    is_styled=false
+)
+    trgt_style = ucm_ch.style
+    return apply_style(ucm_ch, substitutions, aliases, trgt_style; is_styled)
+end
+
+function apply_style(
+    ucm_ch::UCMChar, substitutions::AbstractDict, aliases::AbstractDict, trgt_style::Symbol;
+    is_styled=false,
+)
+    if !is_styled
+        ucm_ch = UCMChar(
+            ucm_ch.name, ucm_ch.alphabet, _typed_style(ucm_ch.style), ucm_ch.glyph)
+    end
+
+    subs_alphabet = get(substitutions, ucm_ch.alphabet, EMPTY_DICT)
+    subs_current_style = get(subs_alphabet, ucm_ch.style, EMPTY_DICT)
+    trgt_style = get(subs_current_style, trgt_style, trgt_style)
+    
+    alisaes_alphabet = get(aliases, ucm_ch.alphabet, EMPTY_DICT)
+    trgt_style = get(alisaes_alphabet, trgt_style, trgt_style)
+    
+    return _choose_style(ucm_ch, trgt_style)
+end
+
+function apply_style(
+    io::IO, ch::Glyph, args...; kwargs...
+)
+    print(io, apply_style(ch, args...; kwargs...))
+end
+
+function apply_style(io::IO, str::AbstractString, args...; kwargs...)
+    cls = ch -> apply_style(ch, args...; kwargs...)
+    for ch in str
+        print(io, cls(ch))
+    end
+end
+
+function apply_style(str::AbstractString, args...; kwargs...)
+    sprint() do io
+        apply_style(io, str, args...; kwargs...)
+    end
 end
 
 function _typed_style(symb)
@@ -97,38 +161,6 @@ function _typed_style(symb)
         symb
     end
     return _symb
-end
-
-function apply_style(
-    ucm_ch::UCMChar, substitutions::AbstractDict, aliases::AbstractDict, trgt_style::Symbol
-)
-    subs_alphabet = get(substitutions, ucm_ch.alphabet, EMPTY_DICT)
-    subs_current_style = get(subs_alphabet, ucm_ch.style, EMPTY_DICT)
-    trgt_style = get(subs_current_style, trgt_style, trgt_style)
-    
-    alisaes_alphabet = get(aliases, ucm_ch.alphabet, EMPTY_DICT)
-    trgt_style = get(alisaes_alphabet, trgt_style, trgt_style)
-    
-    return _choose_style(ucm_ch, trgt_style)
-end
-
-function apply_style(
-    io::IO, ch::Glyph, args...; kwargs...
-)
-    print(io, apply_style(ch, args...; kwargs...))
-end
-
-function apply_style(io::IO, str::AbstractString, args...; kwargs...)
-    cls = ch -> apply_style(ch, args...; kwargs...)
-    for ch in str
-        print(io, cls(ch))
-    end
-end
-
-function apply_style(str::AbstractString, args...; kwargs...)
-    sprint() do io
-        apply_style(io, str, args...; kwargs...)
-    end
 end
 
 ## helper function -- given `ucm_ch::UCMChar` and a target style like `:bf`,
@@ -210,6 +242,12 @@ function parse_config(;
     partial = isnothing(partial) ? cfg.partial : partial
     nabla = isnothing(nabla) ? cfg.nabla : nabla
     return (; nabla, partial, normal_style_spec, bold_style_spec, sans_style)
+end
+
+function config_dicts(cfg::UCMConfig)
+    @unpack math_style_spec, normal_style_spec, bold_style_spec, sans_style, partial, nabla = cfg
+    return config_dicts(; 
+        math_style_spec, normal_style_spec, bold_style_spec, sans_style, partial, nabla)
 end
 
 function config_dicts(; kwargs...)
@@ -360,8 +398,13 @@ function _subtitutions_dict(;
     ## `subs_up`: how glyphs with an upright style should be transformed if we request
     ## a certain style, which are keys of this dict
     subs_up = Dict( sn => sn for sn = base_styles )
-    subs_up[:UP] = normal_style == :italic ? :it : (normal_style == :upright ? :up : :up)
-    subs_up[:bf] = if bold_style == :upright   ### expanded for illustration purposes
+    subs_up[:bf] = :bfup
+    subs_up[:sf] = :sfup
+    subs_up[:bfsf] = :bfsfup
+
+    subs_UP = copy(subs_up)
+    subs_UP[:up] = normal_style == :italic ? :it : (normal_style == :upright ? :up : :up)
+    subs_UP[:bf] = if bold_style == :upright   ### expanded for illustration purposes
         ### bold_style forces upright bold 
         :bfup 
     elseif bold_style == :italic 
@@ -371,15 +414,21 @@ function _subtitutions_dict(;
         ### bold_style does not care about slanting, we have an `:up` glyph, so keep it that way
         :bfup
     end
-    subs_up[:sf] = sans_style == :upright ? :sfup : (sans_style == :italic ? :sfit : :sfup)
-    subs_up[:bfsf] = sans_style == :upright ? :bfsfup : (sans_style == :italic ? :bfsfit : :bfsfup)
+    subs_UP[:sf] = sans_style == :upright ? :sfup : (sans_style == :italic ? :sfit : :sfup)
+    subs_UP[:bfsf] = sans_style == :upright ? :bfsfup : (sans_style == :italic ? :bfsfit : :bfsfup)
 
     ## `subs_it`: transformations for italic glyphs
     subs_it = Dict( sn => sn for sn = base_styles )
-    subs_it[:IT] = normal_style == :italic ? :it : (normal_style == :upright ? :up : :it)
-    subs_it[:bf] = bold_style == :upright ? :bfup : (bold_style == :italic ? :bfit : :bfit)
-    subs_it[:sf] = sans_style == :upright ? :sfup : (sans_style == :italic ? :sfit : :sfit)
-    subs_it[:bfsf] = sans_style == :upright ? :bfsfup : (sans_style == :italic ? :bfsfit : :bfsfit)
+    subs_it[:bf] = :bfit
+    subs_it[:sf] = :sfit
+    subs_it[:bfsf] = :bfsfit
+    subs_it[:bb] = :bbit
+
+    subs_IT = copy(subs_it)
+    subs_IT[:it] = normal_style == :italic ? :it : (normal_style == :upright ? :up : :it)
+    subs_IT[:bf] = bold_style == :upright ? :bfup : (bold_style == :italic ? :bfit : :bfit)
+    subs_IT[:sf] = sans_style == :upright ? :sfup : (sans_style == :italic ? :sfit : :sfit)
+    subs_IT[:bfsf] = sans_style == :upright ? :bfsfup : (sans_style == :italic ? :bfsfit : :bfsfit)
     #subs_it[:bb] = :bbit   # `blackboard_style`?
    
     ## `sub_bfup`: transformations for bold upright glyphs
@@ -390,29 +439,33 @@ function _subtitutions_dict(;
         :it => :bfit,
         :bfit => :bfit,
         :sfup => :bfsfup,
+        :bfsf => :bfsf,
         :bfsfup => :bfsfup,
         :sfit => :bfsfit,
         :bfsfit => :bfsfit,
         :cal => :bfcal,
-        :frak => :bffrak
+        :frak => :bffrak,
     )
-    subs_bfup[:BFUP] = bold_style == :upright ? :bfup : (bold_style == :italic ? :bfit : :bfup)
-    subs_bfup[:bfsf] = subs_bfup[:sf] = sans_style == :upright ? :bfsfup : (sans_style == :italic ? :bfsfit : :bfsfup)
+    subs_BFUP = copy(subs_bfup)
+    subs_BFUP[:bf] = subs_BFUP[:bfup] = bold_style == :upright ? :bfup : (bold_style == :italic ? :bfit : :bfup)
+    subs_BFUP[:bfsf] = subs_bfup[:sf] = sans_style == :upright ? :bfsfup : (sans_style == :italic ? :bfsfit : :bfsfup)
 
     ## `sub_bfit`: transformations for bold italic glyphs
     subs_bfit = Dict(
-        :bf => :bf,     # no-op
+        :bf => :bfit,   # no-op
         :bfit => :bfit, # no-op
         :it => :bfit,   # no-op
         :up => :bfup,   # undo italization
         :bfup => :bfup, # undo italization
         :sfit => :bfsfit,
+        :bfsf => :bfsfit,
         :bfsfit => :bfsfit,
         :sfup => :bfsfup,
         :bfsfup => :bfsfup,
     )
-    subs_bfit[:BFIT] = bold_style == :upright ? :bfup : (bold_style == :italic ? :bfit : :bfit)
-    subs_bfit[:bfsf] = subs_bfit[:sf] = sans_style == :upright ? :bfsfup : (sans_style == :italic ? :bfsfit : :bfsfit)
+    subs_BFIT = copy(subs_bfit)
+    subs_BFIT[:bf] = subs_BFIT[:bfit] = bold_style == :upright ? :bfup : (bold_style == :italic ? :bfit : :bfit)
+    subs_BFIT[:bfsf] = subs_bfit[:sf] = sans_style == :upright ? :bfsfup : (sans_style == :italic ? :bfsfit : :bfsfit)
 
     ## `sub_bfit`: transformations for sans-serif upright glyphs
     subs_sfup = Dict(
@@ -422,12 +475,14 @@ function _subtitutions_dict(;
         :it => :sfit,
         :sfit => :sfit,
         :bfup => :bfsfup,
+        :bfsf => :bfsfup,
         :bfsfup => :bfsfup,
         :bfit => :bfsfit,
         :bfsfit => :bfsfit,
     )
-    subs_sfup[:SFUP] = sans_style == :upright ? :sfup : (sans_style == :italic ? :sfit : :sfup)
-    subs_sfup[:bfsf] = subs_sfup[:bf] = sans_style == :upright ? :bfsfup : (sans_style == :italic ? :bfsfit : :bfsfup)
+    subs_SFUP = copy(subs_sfup)
+    subs_SFUP[:sfup] = sans_style == :upright ? :sfup : (sans_style == :italic ? :sfit : :sfup)
+    subs_sfup[:bf] = subs_SFUP[:bfsf] = sans_style == :upright ? :bfsfup : (sans_style == :italic ? :bfsfit : :bfsfup)
 
     ## `sub_bfit`: transformations for sans-serif italic glyphs
     subs_sfit = Dict(
@@ -437,12 +492,14 @@ function _subtitutions_dict(;
         :up => :sfup,
         :sfup => :sfup,
         :bfit => :bfsfit,
+        :bfsf => :bfsfit,
         :bfsfit => :bfsfit,
         :bfup => :bfsfup,
         :bfsfup => :bfsfup,
     )
-    subs_sfit[:SFIT] = sans_style == :upright ? :sfup : (sans_style == :italic ? :sfit : :sfit)
-    subs_sfit[:bfsf] = subs_sfit[:bf] = sans_style == :upright ? :bfsfup : (sans_style == :italic ? :bfsfit : :bfsfit)
+    subs_SFIT = copy(subs_sfit)
+    subs_SFIT[:sfit] = sans_style == :upright ? :sfup : (sans_style == :italic ? :sfit : :sfit)
+    subs_sfit[:bf] = subs_SFIT[:bfsf] = sans_style == :upright ? :bfsfup : (sans_style == :italic ? :bfsfit : :bfsfit)
 
     ## `sub_bfsfup`: transformations for bold sans-serif upright glyphs
     subs_bfsfup = Dict(
@@ -458,7 +515,8 @@ function _subtitutions_dict(;
         :sfit => :bfsfit,
         :bfsfit => :bfsfit
     )
-    subs_bfsfup[:BFSFUP] = sans_style == :upright ? :bfsfup : (sans_style == :italic ? :bfsfit : :bfsfup)
+    subs_BFSFUP = copy(subs_bfsfup)
+    subs_BFSFUP[:bfsfup] = sans_style == :upright ? :bfsfup : (sans_style == :italic ? :bfsfit : :bfsfup)
     
     ## `sub_bfsfit`: transformations for bold sans-serif italic glyphs
     subs_bfsfit = Dict(
@@ -474,7 +532,8 @@ function _subtitutions_dict(;
         :sfup => :bfsfup,
         :bfsfup => :bfsfup
     )
-    subs_bfsfit[:BFSFIT] = sans_style == :upright ? :bfsfup : (sans_style == :italic ? :bfsfit : :bfsfit)
+    subs_BFSFIT = copy(subs_bfsfit)
+    subs_BFSFIT[:bfsfit] = sans_style == :upright ? :bfsfup : (sans_style == :italic ? :bfsfit : :bfsfit)
 
     ## other
     subs_tt = Dict(
@@ -522,6 +581,14 @@ function _subtitutions_dict(;
         :bbit => subs_bbit,
         :cal => subs_cal,
         :frak => subs_frak,
-        :bffrak => subs_bffrak
+        :bffrak => subs_bffrak,
+        :UP => subs_UP,
+        :IT => subs_IT,
+        :BFUP => subs_BFUP,
+        :BFIT => subs_BFIT,
+        :SFUP => subs_SFUP,
+        :SFIT => subs_SFIT,
+        :BFSFUP => subs_BFSFUP,
+        :BFSFIT => subs_BFSFIT,
     )
 end

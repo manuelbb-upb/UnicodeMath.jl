@@ -284,9 +284,9 @@ const test_strings = Dict(
         :Latin_up => :Latin_up,
         :latin_it => :latin_it,
         :Latin_it => :Latin_up,
-        :Latin_bfit => :Latin_bfit,
+        :Latin_bfit => :Latin_bfup,
         :Latin_bfup => :Latin_bfup,
-        :latin_bfit => :latin_bfit,
+        :latin_bfit => :latin_bfup,
         :latin_bfup => :latin_bfup,
         :greek_up => :greek_up,
         :Greek_up => :Greek_up,
@@ -307,9 +307,10 @@ const test_strings = Dict(
     )
 
     results_literal = Dict(k => k for k = keys(test_strings))
+
     cfg_tex = UCM.UCMConfig(; math_style_spec=:tex)
     cfg_iso = UCM.UCMConfig(; math_style_spec=:iso)
-    cfg_upright = UCM.UCMConfig(; math_style_spec=:iso)
+    cfg_upright = UCM.UCMConfig(; math_style_spec=:upright)
     cfg_french = UCM.UCMConfig(; math_style_spec=:french)
     cfg_literal = UCM.UCMConfig(; math_style_spec=:literal)
     for (cfg, res) = (
@@ -317,11 +318,11 @@ const test_strings = Dict(
         (cfg_tex, results_tex), 
         (cfg_upright, results_upright),
         (cfg_french, results_french),
-        (cfg_literal, results_literal)
+        (cfg_literal, results_literal),
     )
         for (k, _str) = pairs(test_strings)
-            _styled = test_strings[results_iso[k]]
-            @test UCM.apply_style(_str, cfg_iso) == _styled
+            _styled = test_strings[res[k]]
+            @test UCM.apply_style(_str, cfg) == _styled
         end
     end
 
